@@ -539,9 +539,10 @@ GC.fun = function(win.size = 200, twobitURL = '~/DB/UCSC/hg19.2bit', twobit.win 
 
 PrepareCov = function(bam, skeleton, cov = NULL, reference = NULL, midpoint = TRUE, window = 200, minmapq = 1, paired = TRUE, outdir = NULL, exome = FALSE, use.skel = FALSE) {
   library(GenomeInfoDb) # ADDED BY TANUBRATA: Forcefully loading GenomeInfoDb to Namespace since it is failing for cram files
+  out.raw.rds = paste(outdir, '/cov.raw.rds', sep = '')
   if (exome == TRUE){
 #    cov = bam.cov.exome(bam, chunksize = 1e6, min.mapq = 1)
-    cov = bam.cov.skel(bam, skeleton, chunksize = 1e6, min.mapq = 1, use.skel = use.skel)
+    cov = bam.cov.skel(bam, skeleton, chunksize = 1e6, min.mapq = minmapq, use.skel = use.skel)
   } else {
     if (is.null(bam)) {
       bam = ''
@@ -556,7 +557,7 @@ PrepareCov = function(bam, skeleton, cov = NULL, reference = NULL, midpoint = TR
         paired = TRUE
       }
       if (paired) {
-        cov = bamUtils::bam.cov.tile(bam, window = window, chunksize = 1e6, midpoint = TRUE, min.mapq = 1, reference = reference)  ## counts midpoints of fragments
+        cov = bamUtils::bam.cov.tile(bam, window = window, chunksize = 1e6, midpoint = midpoint, min.mapq = minmapq, reference = reference)  ## counts midpoints of fragments
       }
       else {
         file.type = bamorcram(bam)
@@ -568,6 +569,8 @@ PrepareCov = function(bam, skeleton, cov = NULL, reference = NULL, midpoint = TR
         cov = bamUtils::bam.cov.gr(bam, intervals = tiles, isPaired = NA, isProperPair = NA, hasUnmappedMate = NA, chunksize = 1e5, verbose = TRUE)  ## counts midpoints of fragments    # Can we increase chunksize?
         cov$count = cov$records/width(cov)
       }
+      saveRDS(cov, out.raw.rds)                 ## ADDED BY TANUBRATA: Saves the raw coverage file before performing GC correction.
+      cat('Finished saving raw coverage RDS\n')
     }
     else if (!is.null(cov)) {
       cov = readRDS(cov)
@@ -577,6 +580,7 @@ PrepareCov = function(bam, skeleton, cov = NULL, reference = NULL, midpoint = TR
     }
   }
   gc()
+
   cat('Finished acquiring coverage\n')
   return(cov)
   cat('done\n')
